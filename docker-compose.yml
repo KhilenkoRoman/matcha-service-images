@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  images-service:
+    build: .
+    command: gunicorn config.wsgi:application --bind 0.0.0.0:8002
+    expose:
+      - 8002
+    environment:
+      - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@images_db:5432/${POSTGRES_DB}
+      - GATEWAY_URL= http://gateway:8000/
+      - RABBIT_URL=rabbitmq
+      - RABBIT_PORT=5672
+      - RABBIT_USER=${RABBIT_USER}
+      - RABIT_PASSWORD=${RABIT_PASSWORD}
+      - BASE_URL=${BASE_URL}
+    volumes:
+      - ./static:/app/static
+      - ./media:/app/media
+    depends_on:
+      - images_db
+
+  images_db:
+    image: postgres:9.6-alpine
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    volumes:
+      - ./data/pg_data:/var/lib/postgresql/data:z
+
+  images_nginx:
+    build: ./nginx
+    volumes:
+      - ./media:/media
+    depends_on:
+      - images-service
+
+networks:
+  default:
+    external:
+      name: matcha-network
